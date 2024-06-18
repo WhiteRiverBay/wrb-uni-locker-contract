@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.24;
+
+import "./IUniLocker.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
+    using SafeERC20 for IERC20;
+
+    address public feeTo;
+    uint256 public feeToRate;
+    uint256 private _tokenIDTracker;
+
+    mapping(uint256 => LockItem) public lockItems;
+
+    constructor(
+        string memory name,
+        string memory symbol,
+        address owner
+    ) ERC721(name, symbol) Ownable(owner) {
+        feeTo = msg.sender;
+        feeToRate = 600;
+    }
+
+    function setFeeTo(address _feeTo) external onlyOwner {
+        feeTo = _feeTo;
+    }
+
+    function setFeeToRate(uint256 _feeToRate) external onlyOwner {
+        feeToRate = _feeToRate;
+    }
+
+    function lock(
+        address lpToken,
+        uint256 amountOrId,
+        uint256 unlockBlock
+    ) public override {
+        require(
+            unlockBlock > block.number,
+            "UniLocker: unlockBlock must be in the future"
+        );
+        require(amountOrId > 0, "UniLocker: amountOrId must be greater than 0");
+
+        _transferLP(lpToken, address(this), amountOrId);
+
+        uint256 tokenId = _tokenIDTracker++;
+        _mint(msg.sender, tokenId);
+        lockItems[tokenId] = LockItem(lpToken, amountOrId, unlockBlock);
+
+        emit Lock(lpToken, tokenId, amountOrId, unlockBlock, msg.sender);
+        _afterLock(lockItems[tokenId]);
+    }
+
+    function unlock(uint256 tokenId) public override {
+        LockItem storage item = lockItems[tokenId];
+        require(item.unlockBlock <= block.number, "UniLocker: still locked");
+
+        address _tokenOwner = ownerOf(tokenId);
+
+        _burn(tokenId);
+        _transferLP(item.lpToken, _tokenOwner, item.amountOrId);
+
+        delete lockItems[tokenId];
+        emit Unlock(item.lpToken, tokenId, item.amountOrId, msg.sender);
+        _afterUnlock(item);
+    }
+
+    function _transferLP(
+        address lpToken,
+        address to,
+        uint256 amountOrId
+    ) internal virtual;
+
+    // after lock
+    function _afterLock(LockItem memory item) internal virtual {}
+
+    // after unlock
+    function _afterUnlock(LockItem memory item) internal virtual {}
+}
