@@ -11,7 +11,7 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
     using SafeERC20 for IERC20;
 
     address public feeTo;
-    uint256 public feeToRate;
+    uint256 public immutable feeToRate;
     uint256 private _tokenIDTracker;
 
     mapping(uint256 => LockItem) public lockItems;
@@ -29,22 +29,18 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
         feeTo = _feeTo;
     }
 
-    function setFeeToRate(uint256 _feeToRate) external onlyOwner {
-        feeToRate = _feeToRate;
-    }
-
     function lock(
         address lpToken,
         uint256 amountOrId,
         uint256 unlockBlock
-    ) public override {
+    ) public override returns (uint256 id) {
         require(
             unlockBlock > block.number,
             "UniLocker: unlockBlock must be in the future"
         );
         require(amountOrId > 0, "UniLocker: amountOrId must be greater than 0");
 
-        _transferLP(lpToken, address(this), amountOrId);
+        _transferLP(lpToken, msg.sender, address(this), amountOrId);
 
         uint256 tokenId = _tokenIDTracker++;
         _mint(msg.sender, tokenId);
@@ -52,6 +48,8 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
 
         emit Lock(lpToken, tokenId, amountOrId, unlockBlock, msg.sender);
         _afterLock(lockItems[tokenId]);
+
+        return tokenId;
     }
 
     function unlock(uint256 tokenId) public override {
@@ -59,17 +57,19 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
         require(item.unlockBlock <= block.number, "UniLocker: still locked");
 
         address _tokenOwner = ownerOf(tokenId);
+        require(_tokenOwner == msg.sender, "UniLocker: not the LP owner");
 
         _burn(tokenId);
-        _transferLP(item.lpToken, _tokenOwner, item.amountOrId);
+        _transferLP(item.lpToken, address(this), _tokenOwner, item.amountOrId);
 
         delete lockItems[tokenId];
-        emit Unlock(item.lpToken, tokenId, item.amountOrId, msg.sender);
+        emit Unlock(item.lpToken, tokenId, item.amountOrId, _tokenOwner);
         _afterUnlock(item);
     }
 
     function _transferLP(
         address lpToken,
+        address from,
         address to,
         uint256 amountOrId
     ) internal virtual;

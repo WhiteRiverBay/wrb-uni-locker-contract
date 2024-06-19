@@ -19,7 +19,8 @@ interface IUniswapLocker {
     event ClaimProfit(
         address indexed lpToken,
         uint256 indexed tokenId,
-        uint256 profit,
+        uint256 profit0,
+        uint256 profit1,
         address indexed owner
     );
 
@@ -39,7 +40,7 @@ interface IUniswapLocker {
         address lpToken,
         uint256 amountOrId,
         uint256 unlockBlock
-    ) external;
+    ) external returns (uint256 id);
 
     /**
      * unlock lp token in this contract
