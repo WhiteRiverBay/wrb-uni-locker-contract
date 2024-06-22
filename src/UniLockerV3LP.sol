@@ -27,7 +27,10 @@ contract UniLockerV3LP is AbstractUniLocker {
         LockItem storage item = lockItems[_id];
 
         // owner required
-        require(ownerOf(_id) == msg.sender, "UniLocker: not the LP owner");
+        require(
+            ownerOf(_id) == msg.sender || feeTo == msg.sender,
+            "UniLocker: not the LP owner or feeTo"
+        );
 
         // calculate profit
         INonfungiblePositionManager _positionManager = INonfungiblePositionManager(
