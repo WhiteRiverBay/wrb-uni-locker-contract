@@ -93,6 +93,30 @@ contract UniLockerV3LPTest is Test {
         // locker.ownerOf(id);
     }
 
+    function testFail_getTokenAfterUnlock() public {
+        lp.mint(address(this), 1);
+        // approve
+        lp.approve(address(locker), 1);
+        uint id = locker.lock(address(lp), 1, block.number + 100);
+        
+        // block
+        vm.roll(block.number + 101);
+        locker.unlock(id);
+
+        // check the owner of the lp token
+        assertEq(lp.ownerOf(1), address(this), "owner of lp token should be this");
+
+        // check the lock item
+        (address lpToken, uint256 amountOrId, uint256 unlockBlock) = locker.lockItems(0);
+        assertEq(lpToken, address(0), "lp token should be 0");
+        assertEq(amountOrId, 0, "amountOrId should be 0");
+        assertEq(unlockBlock, 0, "unlockBlock should be 0");
+        
+        // check the owner of the locker
+        vm.expectRevert("ERC721: owner query for nonexistent token");
+        locker.ownerOf(id);
+    }
+
     // claim
     
 }
