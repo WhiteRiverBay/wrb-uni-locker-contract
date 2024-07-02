@@ -54,18 +54,19 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
     }
 
     function unlock(uint256 tokenId) public override {
-        LockItem storage item = lockItems[tokenId];
-        require(item.unlockBlock <= block.number, "UniLocker: still locked");
+        // LockItem storage item = lockItems[tokenId];
+        // require(item.unlockBlock <= block.number, "UniLocker: still locked");
 
-        address _tokenOwner = ownerOf(tokenId);
-        require(_tokenOwner == msg.sender, "UniLocker: not the LP owner");
+        // address _tokenOwner = ownerOf(tokenId);
+        // require(_tokenOwner == msg.sender, "UniLocker: not the LP owner");
 
-        _burn(tokenId);
-        _transferLP(item.lpToken, address(this), _tokenOwner, item.amountOrId);
+        // _burn(tokenId);
+        // _transferLP(item.lpToken, address(this), _tokenOwner, item.amountOrId);
 
-        delete lockItems[tokenId];
-        emit Unlock(item.lpToken, tokenId, item.amountOrId, _tokenOwner);
-        _afterUnlock(item);
+        // delete lockItems[tokenId];
+        // emit Unlock(item.lpToken, tokenId, item.amountOrId, _tokenOwner);
+        // _afterUnlock(item);
+        revert("UniLocker: this contract will lock the LP token forever");
     }
 
     function _transferLP(
