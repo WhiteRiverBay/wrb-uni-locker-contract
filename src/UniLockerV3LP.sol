@@ -85,4 +85,9 @@ contract UniLockerV3LP is AbstractUniLocker {
         require(lpToken == positionManager, "UniLockerV3LP: invalid lp token");
         IERC721(lpToken).transferFrom(from, to, amountOrId);
     }
+
+    function unlock(uint256 tokenId) public override {
+        assert(tokenId >= 0);
+        revert("UniLockerV3LP: unlock not supported");
+    }
 }

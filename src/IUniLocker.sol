@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-interface IUniswapLocker {
+import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+
+interface IUniswapLocker is IERC721Enumerable {
     event Lock(
         address indexed lpToken,
         uint256 indexed tokenId,
@@ -53,4 +55,7 @@ interface IUniswapLocker {
      * @param _id the id of the lp token lock item to claim profit
      */
     function claimProfit(uint256 _id) external;
+
+    // lockItems
+    function lockItem(uint256) external view returns (LockItem memory item);
 }

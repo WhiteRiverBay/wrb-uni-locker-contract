@@ -3,11 +3,11 @@ pragma solidity ^0.8.24;
 
 import "./IUniLocker.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
+abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721Enumerable {
     using SafeERC20 for IERC20;
 
     address public feeTo;
@@ -24,6 +24,16 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
         feeTo = msg.sender;
         feeToRate = 600;
         _tokenIDTracker = 1;
+    }
+
+    // lockItem
+    function lockItem(uint256 tokenId)
+        public
+        view
+        override
+        returns (LockItem memory item)
+    {
+        return lockItems[tokenId];
     }
 
     function setFeeTo(address _feeTo) external onlyOwner {
@@ -48,25 +58,21 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
         lockItems[tokenId] = LockItem(lpToken, amountOrId, unlockBlock);
 
         emit Lock(lpToken, tokenId, amountOrId, unlockBlock, msg.sender);
-        _afterLock(lockItems[tokenId]);
-
         return tokenId;
     }
 
-    function unlock(uint256 tokenId) public override {
-        // LockItem storage item = lockItems[tokenId];
-        // require(item.unlockBlock <= block.number, "UniLocker: still locked");
+    function unlock(uint256 tokenId) public virtual override {
+        LockItem storage item = lockItems[tokenId];
+        require(item.unlockBlock <= block.number, "UniLocker: still locked");
 
-        // address _tokenOwner = ownerOf(tokenId);
-        // require(_tokenOwner == msg.sender, "UniLocker: not the LP owner");
+        address _tokenOwner = ownerOf(tokenId);
+        require(_tokenOwner == msg.sender, "UniLocker: not the LP owner");
 
-        // _burn(tokenId);
-        // _transferLP(item.lpToken, address(this), _tokenOwner, item.amountOrId);
+        _burn(tokenId);
+        _transferLP(item.lpToken, address(this), _tokenOwner, item.amountOrId);
 
-        // delete lockItems[tokenId];
-        // emit Unlock(item.lpToken, tokenId, item.amountOrId, _tokenOwner);
-        // _afterUnlock(item);
-        revert("UniLocker: this contract will lock the LP token forever");
+        delete lockItems[tokenId];
+        emit Unlock(item.lpToken, tokenId, item.amountOrId, _tokenOwner);
     }
 
     function _transferLP(
@@ -75,10 +81,4 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721 {
         address to,
         uint256 amountOrId
     ) internal virtual;
-
-    // after lock
-    function _afterLock(LockItem memory item) internal virtual {}
-
-    // after unlock
-    function _afterUnlock(LockItem memory item) internal virtual {}
 }
