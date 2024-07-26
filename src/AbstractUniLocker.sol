@@ -22,7 +22,7 @@ abstract contract AbstractUniLocker is IUniswapLocker, Ownable, ERC721Enumerable
         address owner
     ) ERC721(name, symbol) Ownable(owner) {
         feeTo = msg.sender;
-        feeToRate = 600;
+        feeToRate = 900;
         _tokenIDTracker = 1;
     }
 
